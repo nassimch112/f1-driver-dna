@@ -8,6 +8,40 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
 
+
+# Add driver name mapping
+driver_full_names = {
+    'VER': 'Max Verstappen',
+    'HAM': 'Lewis Hamilton',
+    'LEC': 'Charles Leclerc',
+    'SAI': 'Carlos Sainz',
+    'PER': 'Sergio Perez',
+    'RUS': 'George Russell',
+    'BOT': 'Valtteri Bottas',
+    'ALO': 'Fernando Alonso',
+    'NOR': 'Lando Norris',
+    'OCO': 'Esteban Ocon',
+    'GAS': 'Pierre Gasly',
+    'STR': 'Lance Stroll',
+    'TSU': 'Yuki Tsunoda',
+    'ALB': 'Alexander Albon',
+    'ZHO': 'Zhou Guanyu',
+    'MAG': 'Kevin Magnussen',
+    'HUL': 'Nico Hulkenberg',
+    'RIC': 'Daniel Ricciardo',
+    'MSC': 'Mick Schumacher',
+    'LAT': 'Nicholas Latifi',
+    'DEV': 'Nyck de Vries',
+    'VET': 'Sebastian Vettel',
+    'PIA': 'Oscar Piastri',
+    'SAR': 'Logan Sargeant',
+    'LAW': 'Liam Lawson'
+}
+
+# Helper function to get full name
+def get_full_name(driver_code):
+    return driver_full_names.get(driver_code, driver_code)  # Fallback to code if not found
+
 st.set_page_config(layout="wide", page_title="F1 Driver DNA Analysis")
 
 # Load your processed data (assuming you've saved results to files)
@@ -60,7 +94,12 @@ try:
         with col1:
             # Driver selection
             all_drivers = sorted(list(set([k.split('_')[0] for k in data['driver_keys']])))
-            selected_driver = st.selectbox("Select Driver:", all_drivers)
+            all_drivers_with_names = [(driver, get_full_name(driver)) for driver in all_drivers]
+            driver_display = [f"{name} ({code})" for code, name in all_drivers_with_names]
+            driver_map = {display: code for display, (code, _) in zip(driver_display, all_drivers_with_names)}
+
+            selected_driver_display = st.selectbox("Select Driver:", driver_display)
+            selected_driver = driver_map[selected_driver_display]
             
             # Year selection - show available years for this driver
             available_years = sorted([k.split('_')[1] for k in data['driver_keys'] 
@@ -119,7 +158,7 @@ try:
                     r=cluster_avg,
                     theta=display_features,
                     fill='toself',
-                    name=f"Style Average",
+                    name=f"{selected_driver} ({selected_year})",
                     line=dict(color='rgba(255, 99, 71, 0.8)', width=1, dash='dot'),
                     fillcolor='rgba(255, 99, 71, 0.1)'
                 ))
@@ -130,7 +169,7 @@ try:
                             visible=True,
                             range=[-3, 3]
                         )),
-                    title=f"{selected_driver} DNA Fingerprint ({selected_year})",
+                    title=f"{get_full_name(selected_driver)}'s DNA Fingerprint ({selected_year})",
                     showlegend=True,
                     height=600
                 )
@@ -158,12 +197,14 @@ try:
         
         with col1:
             # Select two drivers to compare
-            driver1 = st.selectbox("Select First Driver:", all_drivers, key="driver1")
+            driver1_display = st.selectbox("Select First Driver:", driver_display, key="driver1")
+            driver1 = driver_map[driver1_display]
             year1 = st.selectbox("Year:", [k.split('_')[1] for k in data['driver_keys'] 
                                         if k.split('_')[0] == driver1], key="year1")
             
         with col2:
-            driver2 = st.selectbox("Select Second Driver:", all_drivers, key="driver2")
+            driver2_display = st.selectbox("Select Second Driver:", driver_display, key="driver2")
+            driver2 = driver_map[driver2_display]
             year2 = st.selectbox("Year:", [k.split('_')[1] for k in data['driver_keys'] 
                                         if k.split('_')[0] == driver2], key="year2")
         
@@ -186,7 +227,7 @@ try:
                 r=values1,
                 theta=display_features,
                 fill='toself',
-                name=f"{driver1} ({year1})",
+                name=f"{selected_driver} ({selected_year})",
                 line=dict(color='rgb(31, 119, 180)', width=2),
                 fillcolor='rgba(31, 119, 180, 0.3)'
             ))
@@ -195,7 +236,7 @@ try:
                 r=values2,
                 theta=display_features,
                 fill='toself',
-                name=f"{driver2} ({year2})",
+                name=f"{selected_driver} ({selected_year})",
                 line=dict(color='rgb(255, 99, 71)', width=2),
                 fillcolor='rgba(255, 99, 71, 0.3)'
             ))
@@ -206,7 +247,7 @@ try:
                         visible=True,
                         range=[-3, 3]
                     )),
-                title=f"Driving Style Comparison: {driver1} vs {driver2}",
+                title=f"Driving Style Comparison: {get_full_name(driver1)} vs {get_full_name(driver2)} ({year1} vs {year2})",
                 showlegend=True,
                 height=700
             )
@@ -221,7 +262,7 @@ try:
                 style1 = data['overall_results']['style_names'][cluster1]
                 desc1 = data['overall_results']['style_descriptions'][cluster1]
                 
-                st.subheader(f"{driver1}'s Style ({year1})")
+                st.subheader(f"{get_full_name(driver1)}'s Style ({year1})")
                 st.markdown(f"**{style1}**")
                 st.markdown(f"*{desc1}*")
                 
@@ -240,7 +281,7 @@ try:
                 style2 = data['overall_results']['style_names'][cluster2]
                 desc2 = data['overall_results']['style_descriptions'][cluster2]
                 
-                st.subheader(f"{driver2}'s Style ({year2})")
+                st.subheader(f"{get_full_name(driver2)}'s Style ({year2})")
                 st.markdown(f"**{style2}**")
                 st.markdown(f"*{desc2}*")
                 
@@ -308,7 +349,7 @@ try:
             adaptability_data = sorted(adaptability_data, key=lambda x: x['adaptability'], reverse=True)
             
             # Create adaptability chart
-            drivers = [f"{d['driver']} ({d['year']})" for d in adaptability_data]
+            drivers = [f"{get_full_name(d['driver'])} ({d['year']})" for d in adaptability_data]
             values = [d['adaptability'] for d in adaptability_data]
             
             fig = px.bar(
@@ -326,16 +367,16 @@ try:
             # Allow user to select a driver to see details
             selected_adaptable_driver = st.selectbox(
                 "Select driver to see track type styles:", 
-                [f"{d['driver']} ({d['year']})" for d in adaptability_data]
+                [f"{get_full_name(d['driver'])} ({d['year']})" for d in adaptability_data]
             )
             
             # Find the selected driver data
             selected_data = next(d for d in adaptability_data 
-                               if f"{d['driver']} ({d['year']})" == selected_adaptable_driver)
-            
+                   if f"{get_full_name(d['driver'])} ({d['year']})" == selected_adaptable_driver)
+
             # Display track specific styles
-            st.subheader(f"{selected_data['driver']}'s Styles Across Track Types ({selected_data['year']})")
-            
+            st.subheader(f"{get_full_name(selected_data['driver'])}'s Styles Across Track Types ({selected_data['year']})")
+
             col1, col2, col3 = st.columns(3)
             
             with col1:
@@ -388,7 +429,7 @@ try:
                         visible=True,
                         range=[-3, 3]
                     )),
-                title=f"{selected_data['driver']}'s Trait Variation by Track Type ({selected_data['year']})",
+                title=f"{get_full_name(selected_data['driver'])}'s Trait Variation by Track Type ({selected_data['year']})",
                 showlegend=True,
                 height=600
             )
@@ -411,13 +452,16 @@ try:
         
         if weather_adaptable:
             # Allow user to select driver
-            selected_driver = st.selectbox(
+            selected_driver_display = st.selectbox(
                 "Select driver to see weather adaptation:", 
-                [f"{key.split('_')[0]} ({key.split('_')[1]})" for key in weather_adaptable]
+                [f"{get_full_name(key.split('_')[0])} ({key.split('_')[1]})" for key in weather_adaptable]
             )
             
-            driver, year = selected_driver.split(' ')[0], selected_driver.split('(')[1][:-1]
+            driver_name = selected_driver_display.split(" (")[0]
+            year = selected_driver_display.split("(")[1][:-1]
+            driver = next(code for code, name in driver_full_names.items() if name == driver_name)
             driver_key = f"{driver}_{year}"
+
             
             if (driver_key in data['weather_results']['dry']['feature_df'].index and 
                 driver_key in data['weather_results']['wet']['feature_df'].index):
@@ -479,7 +523,7 @@ try:
                             visible=True,
                             range=[-3, 3]
                         )),
-                    title=f"{driver}'s Driving Style: Dry vs. Wet Conditions ({year})",
+                    title=f"{get_full_name(driver)}'s Driving Style: Dry vs. Wet Conditions ({year})",
                     showlegend=True,
                     height=600
                 )
