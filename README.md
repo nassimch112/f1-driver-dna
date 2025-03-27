@@ -14,6 +14,16 @@ This project analyzes Formula 1 drivers' telemetry data to identify distinctive 
 - **Weather Adaptation**: Compares driving approaches in dry vs. wet conditions
 - **Interactive Dashboard**: Visualizes all findings through an intuitive Streamlit interface
 
+## Dashboard Preview
+
+### Driver DNA Fingerprint
+![Driver DNA Fingerprint](screenshots/driver-dna-fingerprint.png)
+*Visualizing a driver's unique style characteristics across multiple dimensions*
+
+### Weather Adaptation
+![Weather Adaptation](screenshots/weather-adaptation.png)
+*Changes in driving style between dry and wet conditions*
+
 ## Data Source
 
 This project uses the [FastF1](https://github.com/theOehrly/Fast-F1) Python package to access official Formula 1 timing data.
