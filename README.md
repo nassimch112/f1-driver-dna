@@ -42,17 +42,15 @@ pip install -r requirements.txt
 
 ## Usage
 Run the analysis notebook to generate the driver DNA data:
-
+```bash
 jupyter notebook driver_dna.ipynb
-
+```
 Launch the interactive dashboard:
-
+```bash
 streamlit run driver_dna_dashboard.py
-
+```
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-Disclaimer
 
 ## Disclaimer
 
