@@ -1,7 +1,6 @@
 # Cache and data
 cache/
-*.pkl
-!driver_dna_analysis.pkl # Keep this file
+
 # Python artifacts
 __pycache__/
 *.py[cod]
