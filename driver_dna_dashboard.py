@@ -14,16 +14,22 @@ st.set_page_config(layout="wide", page_title="F1 Driver DNA Analysis")
 # If not, you'll need to run the analysis first
 @st.cache_data
 def load_data():
-    # Load the data from the pickle file you just created
-    with open('driver_dna_analysis.pkl', 'rb') as f:
-        data = pickle.load(f)
-    
-    return {
-        'overall_results': data['overall_results'],
-        'track_type_results': data['track_type_results'], 
-        'weather_results': data['weather_results'],
-        'driver_keys': list(data['aggregated_overall'].keys())
-    }
+    try:
+        # First try to load from a pickle file if it exists
+        with open('driver_dna_analysis.pkl', 'rb') as f:
+            data = pickle.load(f)
+            
+        return {
+            'overall_results': data['overall_results'],
+            'track_type_results': data['track_type_results'], 
+            'weather_results': data['weather_results'],
+            'driver_keys': list(data['aggregated_overall'].keys())
+        }
+    except Exception as e:
+        # Fallback message
+        st.error(f"Could not load analysis data: {e}")
+        st.info("Please make sure to run the analysis notebook and save results to 'driver_dna_analysis.pkl'")
+        return None
 
 # Title and description
 st.title("F1 Driver DNA - Qualifying Analysis")
