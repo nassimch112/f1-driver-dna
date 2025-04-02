@@ -57,7 +57,8 @@ def load_data():
             'overall_results': data['overall_results'],
             'track_type_results': data['track_type_results'], 
             'weather_results': data['weather_results'],
-            'driver_keys': list(data['aggregated_overall'].keys())
+            'driver_keys': list(data['aggregated_overall'].keys()),
+            'adaptability_data': data.get('adaptability_data', [])
         }
     except Exception as e:
         # Fallback message
@@ -301,54 +302,9 @@ try:
     with tab3:
         st.header("Driver Adaptability Across Track Types")
         
-        # Get all drivers with data for all track types
-        adaptable_drivers = []
-        for driver_key in data['driver_keys']:
-            driver = driver_key.split('_')[0]
-            year = driver_key.split('_')[1]
-            
-            # Check if driver has data for all track types
-            has_all_types = True
-            for track_type in data['track_type_results']:
-                if driver_key not in data['track_type_results'][track_type]['feature_df'].index:
-                    has_all_types = False
-                    break
-            
-            if has_all_types:
-                adaptable_drivers.append(driver_key)
-        
-        # Calculate adaptability scores
-        if adaptable_drivers:
-            adaptability_data = []
-            
-            for driver_key in adaptable_drivers:
-                driver = driver_key.split('_')[0]
-                year = driver_key.split('_')[1]
-                
-                styles = {}
-                for track_type, result in data['track_type_results'].items():
-                    cluster = result['feature_df'].loc[driver_key, 'cluster']
-                    style = result['style_names'][cluster]
-                    styles[track_type] = style
-                
-                # Count unique styles
-                unique_styles = len(set(styles.values()))
-                
-                # Calculate adaptability (percentage of track types with different styles)
-                adaptability = ((unique_styles - 1) / (len(data['track_type_results']) - 1) 
-                               if len(data['track_type_results']) > 1 else 0)
-                
-                adaptability_data.append({
-                    'driver': driver,
-                    'year': year,
-                    'driver_key': driver_key,
-                    'adaptability': adaptability * 100,
-                    'unique_styles': unique_styles,
-                    'styles': styles
-                })
-            
-            # Sort by adaptability
-            adaptability_data = sorted(adaptability_data, key=lambda x: x['adaptability'], reverse=True)
+        # Use the pre-calculated adaptability data 
+        if 'adaptability_data' in data:
+            adaptability_data = data['adaptability_data']
             
             # Create adaptability chart
             drivers = [f"{get_full_name(d['driver'])} ({d['year']})" for d in adaptability_data]
@@ -358,13 +314,20 @@ try:
                 x=drivers, 
                 y=values,
                 title="Driver Adaptability Across Track Types",
-                labels={'x': 'Driver', 'y': 'Adaptability Score (%)'},
+                labels={'x': 'Driver', 'y': 'Adaptability Score'},
                 color=values,
                 color_continuous_scale='viridis'
             )
             
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
+            
+            # Add explanation of the score
+            st.info("""
+            The adaptability score measures how much drivers change their approach across different track types.
+            It's calculated by measuring the variance in driving traits across high-speed, technical, and street circuits.
+            Higher scores indicate drivers who make larger adjustments to their driving style.
+            """)
             
             # Allow user to select a driver to see details
             selected_adaptable_driver = st.selectbox(
@@ -374,11 +337,11 @@ try:
             
             # Find the selected driver data
             selected_data = next(d for d in adaptability_data 
-                   if f"{get_full_name(d['driver'])} ({d['year']})" == selected_adaptable_driver)
-
+                if f"{get_full_name(d['driver'])} ({d['year']})" == selected_adaptable_driver)
+            
             # Display track specific styles
             st.subheader(f"{get_full_name(selected_data['driver'])}'s Styles Across Track Types ({selected_data['year']})")
-
+            
             col1, col2, col3 = st.columns(3)
             
             with col1:
@@ -393,38 +356,40 @@ try:
                 st.markdown("**Street Circuits:**")
                 st.markdown(f"{selected_data['styles']['street']}")
             
-            # Show trait variation across track types
-            st.subheader("Trait Variation Across Track Types")
-            
-            # Get feature data for each track type
-            feature_cols = [col for col in data['track_type_results']['high_speed']['feature_df'].columns 
-                           if col not in ['driver', 'year', 'cluster']]
-            
-            track_values = {}
-            for track_type in data['track_type_results']:
-                if selected_data['driver_key'] in data['track_type_results'][track_type]['feature_df'].index:
-                    track_values[track_type] = data['track_type_results'][track_type]['feature_df'].loc[
-                        selected_data['driver_key'], feature_cols].values
-            
-            # Create comparison plot
+            # Create a spider chart to visualize trait differences across track types
+            st.subheader("Trait Variation by Track Type")
+
+            # Get feature columns (excluding non-feature columns)
+            first_track_type = list(data['track_type_results'].keys())[0]
+            feature_cols = [col for col in data['track_type_results'][first_track_type]['feature_df'].columns 
+                        if col not in ['driver', 'year', 'cluster']]
+            display_features = [f.replace('_', ' ').title() for f in feature_cols]
+
+            # Create the spider chart
             fig = go.Figure()
-            
+
+            # Colors for each track type
             colors = {
-                'high_speed': 'rgb(31, 119, 180)',
-                'technical': 'rgb(255, 99, 71)', 
-                'street': 'rgb(50, 205, 50)'
+                'high_speed': 'rgb(31, 119, 180)',  # Blue
+                'technical': 'rgb(255, 127, 14)',   # Orange
+                'street': 'rgb(44, 160, 44)'        # Green
             }
-            
-            for track_type, values in track_values.items():
-                fig.add_trace(go.Scatterpolar(
-                    r=values,
-                    theta=[f.replace('_', ' ').title() for f in feature_cols],
-                    fill='toself',
-                    name=f"{track_type.title()}",
-                    line=dict(color=colors[track_type], width=2),
-                    fillcolor=f"rgba{colors[track_type][3:-1]}, 0.3)"
-                ))
-            
+
+            # Add a trace for each track type
+            for track_type in ['high_speed', 'technical', 'street']:
+                driver_key = f"{selected_data['driver']}_{selected_data['year']}"
+                if driver_key in data['track_type_results'][track_type]['feature_df'].index:
+                    values = data['track_type_results'][track_type]['feature_df'].loc[driver_key, feature_cols].values
+                    
+                    fig.add_trace(go.Scatterpolar(
+                        r=values,
+                        theta=display_features,
+                        fill='toself',
+                        name=f"{track_type.replace('_', ' ').title()} Tracks",
+                        line=dict(color=colors[track_type], width=2),
+                        fillcolor=f"rgba{colors[track_type][3:-1]}, 0.3)"
+                    ))
+
             fig.update_layout(
                 polar=dict(
                     radialaxis=dict(
@@ -435,8 +400,28 @@ try:
                 showlegend=True,
                 height=600
             )
-            
+
             st.plotly_chart(fig, use_container_width=True)
+
+            # Show most adapted features
+            st.subheader("Most Adapted Driving Traits")
+            
+            if 'most_adapted_features' in selected_data:
+                for i, (feature, variance) in enumerate(reversed(selected_data['most_adapted_features'])):
+                    st.markdown(f"**{i+1}. {feature.replace('_', ' ').title()}**: Variance = {variance:.3f}")
+                    
+                    # Add explanation based on the feature
+                    if feature == 'path_smoothness':
+                        st.markdown("*Changes racing line approach between track types*")
+                    elif feature == 'avg_throttle_intensity':
+                        st.markdown("*Modifies throttle application strategy depending on track*")
+                    elif feature == 'entry_exit_bias':
+                        st.markdown("*Shifts priority between corner entry and exit based on track type*")
+                    elif feature == 'avg_corner_speed_reduction':
+                        st.markdown("*Adapts corner approach and minimum speed*")
+                    elif feature == 'avg_brake_intensity':
+                        st.markdown("*Adjusts braking technique for different track configurations*")
+        
     
     # TAB 4: WEATHER ADAPTABILITY
     with tab4:
