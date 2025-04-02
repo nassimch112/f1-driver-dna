@@ -158,7 +158,7 @@ try:
                     r=cluster_avg,
                     theta=display_features,
                     fill='toself',
-                    name=f"{selected_driver} ({selected_year})",
+                    name=f"Style Average",
                     line=dict(color='rgba(255, 99, 71, 0.8)', width=1, dash='dot'),
                     fillcolor='rgba(255, 99, 71, 0.1)'
                 ))
@@ -223,20 +223,22 @@ try:
             
             fig = go.Figure()
             
+            # First trace (driver 1)
             fig.add_trace(go.Scatterpolar(
                 r=values1,
                 theta=display_features,
                 fill='toself',
-                name=f"{selected_driver} ({selected_year})",
+                name=f"{get_full_name(driver1)} ({year1})",
                 line=dict(color='rgb(31, 119, 180)', width=2),
                 fillcolor='rgba(31, 119, 180, 0.3)'
             ))
             
+            # Second trace (driver 2)
             fig.add_trace(go.Scatterpolar(
                 r=values2,
                 theta=display_features,
                 fill='toself',
-                name=f"{selected_driver} ({selected_year})",
+                name=f"{get_full_name(driver2)} ({year2})",
                 line=dict(color='rgb(255, 99, 71)', width=2),
                 fillcolor='rgba(255, 99, 71, 0.3)'
             ))
